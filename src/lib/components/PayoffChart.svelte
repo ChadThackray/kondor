@@ -1,11 +1,17 @@
 <script lang="ts">
-	import { Chart, Svg, Axis, Area } from 'layerchart';
+	import { Chart, Svg, Axis, Area, Spline } from 'layerchart';
 	import { positionStore } from '$lib/stores/positions.svelte';
-	import { generateChartData, formatPrice, formatPnl } from '$lib/utils/payoff';
+	import { generateDualChartData, formatPrice, formatPnl } from '$lib/utils/payoff';
 
-	// Generate chart data reactively
+	// Generate dual chart data reactively
 	const chartData = $derived(
-		generateChartData(positionStore.positions, positionStore.underlyingPrice)
+		generateDualChartData(
+			positionStore.positions,
+			positionStore.underlyingPrice,
+			positionStore.daysToExpiry,
+			positionStore.volatility,
+			positionStore.riskFreeRate
+		)
 	);
 
 	// Stats for display
@@ -14,11 +20,16 @@
 		maxLoss: chartData.maxLoss,
 		breakevens: chartData.breakevens
 	});
+
+	// Check if we're showing time value (slider not at 0)
+	const showingTimeValue = $derived(positionStore.daysToExpiry > 0);
 </script>
 
 <div class="flex flex-col h-full">
 	<div class="flex items-center justify-between mb-2">
-		<h2 class="text-lg font-semibold">P&L at Expiry</h2>
+		<h2 class="text-lg font-semibold">
+			{showingTimeValue ? `P&L (${positionStore.daysToExpiry} days to expiry)` : 'P&L at Expiry'}
+		</h2>
 		{#if positionStore.hasPositions}
 			<div class="flex gap-4 text-sm">
 				<span>
@@ -53,7 +64,7 @@
 		{:else}
 			<div style="height: 100%; width: 100%;">
 				<Chart
-					data={chartData.combined}
+					data={chartData.withTimeValue}
 					x="price"
 					y="pnl"
 					yBaseline={0}
@@ -72,12 +83,21 @@
 							format={(d: number) => formatPrice(d)}
 							tickLabelProps={{ class: 'stroke-none fill-current' }}
 						/>
+						<!-- Time-value curve (solid, filled) -->
 						<Area
 							y0={0}
 							line={{ stroke: 'var(--color-dark-text)', strokeWidth: 2 }}
 							fill="var(--color-accent)"
 							fillOpacity={0.3}
 						/>
+						<!-- At-expiry curve (lighter, no fill) - only show when time value is different -->
+						{#if showingTimeValue}
+							<Spline
+								data={chartData.atExpiry}
+								stroke="rgba(148, 163, 184, 0.5)"
+								strokeWidth={1.5}
+							/>
+						{/if}
 					</Svg>
 				</Chart>
 			</div>

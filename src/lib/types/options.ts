@@ -50,3 +50,12 @@ export interface ChartData {
 	maxProfit: number | 'unlimited';
 	maxLoss: number | 'unlimited';
 }
+
+/** Dual chart data with both time-value and at-expiry curves */
+export interface DualChartData {
+	atExpiry: PayoffPoint[];
+	withTimeValue: PayoffPoint[];
+	breakevens: number[];
+	maxProfit: number | 'unlimited';
+	maxLoss: number | 'unlimited';
+}

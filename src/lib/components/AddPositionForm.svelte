@@ -2,12 +2,19 @@
 	import type { OptionType, Direction, PositionFormState } from '$lib/types/options';
 	import { positionStore } from '$lib/stores/positions.svelte';
 
+	function getDefaultExpiryDate(): string {
+		const date = new Date();
+		date.setDate(date.getDate() + 30);
+		return date.toISOString().split('T')[0];
+	}
+
 	let formState = $state<PositionFormState>({
 		optionType: 'call',
 		direction: 'long',
 		strike: '',
 		premium: '',
-		quantity: '1'
+		quantity: '1',
+		expiryDate: getDefaultExpiryDate()
 	});
 
 	let errors = $state<Partial<Record<keyof PositionFormState, string>>>({});
@@ -30,6 +37,13 @@
 			newErrors.quantity = 'Quantity must be 1-1000';
 		}
 
+		const expiryDate = new Date(formState.expiryDate);
+		const today = new Date();
+		today.setHours(0, 0, 0, 0);
+		if (isNaN(expiryDate.getTime()) || expiryDate <= today) {
+			newErrors.expiryDate = 'Expiry must be in the future';
+		}
+
 		errors = newErrors;
 		return Object.keys(newErrors).length === 0;
 	}
@@ -44,10 +58,11 @@
 			direction: formState.direction,
 			strike: parseFloat(formState.strike),
 			premium: parseFloat(formState.premium),
-			quantity: parseInt(formState.quantity, 10)
+			quantity: parseInt(formState.quantity, 10),
+			expiryDate: new Date(formState.expiryDate)
 		});
 
-		// Reset form (keep type and direction, clear numbers)
+		// Reset form (keep type, direction, and expiry, clear numbers)
 		formState.strike = '';
 		formState.premium = '';
 		formState.quantity = '1';
@@ -168,6 +183,22 @@
 		/>
 		{#if errors.quantity}
 			<span class="text-xs text-loss">{errors.quantity}</span>
+		{/if}
+	</div>
+
+	<!-- Expiry Date -->
+	<div class="flex flex-col gap-1">
+		<label for="expiryDate" class="text-sm text-dark-muted">Expiry Date</label>
+		<input
+			id="expiryDate"
+			type="date"
+			bind:value={formState.expiryDate}
+			class="w-full px-3 py-2 bg-dark-card border rounded text-dark-text
+             focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent
+             {errors.expiryDate ? 'border-loss' : 'border-dark-border'}"
+		/>
+		{#if errors.expiryDate}
+			<span class="text-xs text-loss">{errors.expiryDate}</span>
 		{/if}
 	</div>
 

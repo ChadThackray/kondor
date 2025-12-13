@@ -1,4 +1,11 @@
-import type { OptionPosition, PayoffPoint, ChartData, PositionPayoffSeries } from '$lib/types/options';
+import type {
+	OptionPosition,
+	PayoffPoint,
+	ChartData,
+	DualChartData,
+	PositionPayoffSeries
+} from '$lib/types/options';
+import { optionPrice, daysToYears } from './blackscholes';
 
 /**
  * Calculate PNL for a single position at a given underlying price (at expiry)
@@ -28,6 +35,46 @@ export function calculatePositionPnl(position: OptionPosition, underlyingPrice: 
 export function calculateCombinedPnl(positions: OptionPosition[], underlyingPrice: number): number {
 	return positions.reduce((total, pos) => {
 		return total + calculatePositionPnl(pos, underlyingPrice);
+	}, 0);
+}
+
+/**
+ * Calculate PNL for a single position with time value using Black-Scholes
+ */
+export function calculatePositionPnlWithTimeValue(
+	position: OptionPosition,
+	underlyingPrice: number,
+	daysToExpiry: number,
+	volatility: number,
+	riskFreeRate: number
+): number {
+	const { optionType, direction, strike, premium, quantity } = position;
+	const isCall = optionType === 'call';
+	const T = daysToYears(daysToExpiry);
+
+	// Calculate current option value using Black-Scholes
+	const currentValue = optionPrice(isCall, underlyingPrice, strike, T, riskFreeRate, volatility);
+
+	// Long pays premium, current value is what option is worth
+	// Short receives premium, current value is cost to close
+	const directionMultiplier = direction === 'long' ? 1 : -1;
+	const pnlPerContract = (currentValue - premium) * directionMultiplier;
+
+	return pnlPerContract * quantity;
+}
+
+/**
+ * Calculate combined PNL with time value across all positions
+ */
+export function calculateCombinedPnlWithTimeValue(
+	positions: OptionPosition[],
+	underlyingPrice: number,
+	daysToExpiry: number,
+	volatility: number,
+	riskFreeRate: number
+): number {
+	return positions.reduce((total, pos) => {
+		return total + calculatePositionPnlWithTimeValue(pos, underlyingPrice, daysToExpiry, volatility, riskFreeRate);
 	}, 0);
 }
 
@@ -245,6 +292,59 @@ export function generateChartData(
 	return {
 		combined,
 		individual,
+		breakevens,
+		maxProfit,
+		maxLoss
+	};
+}
+
+/**
+ * Generate dual chart data with both at-expiry and time-value curves
+ */
+export function generateDualChartData(
+	positions: OptionPosition[],
+	currentPrice: number,
+	daysToExpiry: number,
+	volatility: number,
+	riskFreeRate: number,
+	numPoints: number = 200
+): DualChartData {
+	const [minPrice, maxPrice] = calculatePriceRange(positions, currentPrice);
+	const step = (maxPrice - minPrice) / (numPoints - 1);
+
+	const atExpiry: PayoffPoint[] = [];
+	const withTimeValue: PayoffPoint[] = [];
+
+	// Generate points for both curves
+	for (let i = 0; i < numPoints; i++) {
+		const price = minPrice + step * i;
+
+		// At-expiry payoff (intrinsic value only)
+		atExpiry.push({
+			price,
+			pnl: calculateCombinedPnl(positions, price)
+		});
+
+		// Time-value payoff (Black-Scholes priced)
+		// When daysToExpiry is 0, this equals the at-expiry value
+		withTimeValue.push({
+			price,
+			pnl:
+				daysToExpiry > 0
+					? calculateCombinedPnlWithTimeValue(positions, price, daysToExpiry, volatility, riskFreeRate)
+					: calculateCombinedPnl(positions, price)
+		});
+	}
+
+	// Find breakeven points for the time-value curve
+	const breakevens = findBreakevens(withTimeValue);
+
+	// Calculate theoretical max profit/loss (based on at-expiry values)
+	const { maxProfit, maxLoss } = calculateTheoreticalMaxProfitLoss(positions);
+
+	return {
+		atExpiry,
+		withTimeValue,
 		breakevens,
 		maxProfit,
 		maxLoss
