@@ -12,6 +12,7 @@ export interface OptionPosition {
 	strike: number;
 	premium: number;
 	quantity: number;
+	expiryDate: Date;
 }
 
 /** Form input state (string values for input binding) */
@@ -21,6 +22,7 @@ export interface PositionFormState {
 	strike: string;
 	premium: string;
 	quantity: string;
+	expiryDate: string;
 }
 
 /** Validated position ready for creation (excludes id) */
