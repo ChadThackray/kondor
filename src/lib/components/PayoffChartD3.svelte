@@ -125,13 +125,24 @@
 
 		// Filter data to current X domain
 		const [xMin, xMax] = currentXDomain();
-		const visibleData = chartData.withTimeValue.filter(d => d.price >= xMin && d.price <= xMax);
+		const visibleTimeValue = chartData.withTimeValue.filter(d => d.price >= xMin && d.price <= xMax);
+		const visibleAtExpiry = chartData.atExpiry.filter(d => d.price >= xMin && d.price <= xMax);
 
-		if (visibleData.length === 0) {
+		if (visibleTimeValue.length === 0) {
 			return baseYScale();
 		}
 
-		const pnlExtent = extent(visibleData, (d) => d.pnl) as [number, number];
+		// Consider both curves when calculating Y extent
+		const timeValueExtent = extent(visibleTimeValue, (d) => d.pnl) as [number, number];
+		const atExpiryExtent = visibleAtExpiry.length > 0
+			? extent(visibleAtExpiry, (d) => d.pnl) as [number, number]
+			: timeValueExtent;
+
+		const pnlExtent: [number, number] = [
+			Math.min(timeValueExtent[0], atExpiryExtent[0]),
+			Math.max(timeValueExtent[1], atExpiryExtent[1])
+		];
+
 		// Add 10% padding to top and bottom so data doesn't touch axes
 		const range = pnlExtent[1] - pnlExtent[0];
 		const padding = range * 0.1;
@@ -162,9 +173,20 @@
 
 		// Capture reference scale at gesture start - this is critical for smooth panning
 		let referenceScale: ScaleLinear<number, number> | null = null;
+		let hasActualMovement = false;
 
 		const zoom = d3zoom<SVGSVGElement, unknown>()
 			.scaleExtent([0.5, 20]) // Allow zoom in and out
+			.filter((event) => {
+				// Only respond to wheel events and drag (not single clicks)
+				// Ignore right-click and ctrl+click
+				if (event.ctrlKey || event.button) return false;
+				// Allow wheel events
+				if (event.type === 'wheel') return true;
+				// Allow drag events (mousedown followed by mousemove)
+				if (event.type === 'mousedown' || event.type === 'touchstart') return true;
+				return false;
+			})
 			.wheelDelta((event) => {
 				// Reduce zoom sensitivity - default is -event.deltaY * 0.002
 				// Using 0.0005 makes it 4x slower
@@ -172,12 +194,16 @@
 			})
 			.on('start', () => {
 				isDragging = true;
+				hasActualMovement = false;
 				// Capture current display scale as reference for this gesture
 				// This ensures transform is always applied to a consistent reference
 				referenceScale = xScale();
 			})
 			.on('zoom', (event: D3ZoomEvent<SVGSVGElement, unknown>) => {
 				if (!referenceScale) return;
+
+				// Mark that we have actual movement
+				hasActualMovement = true;
 
 				// Apply transform to reference scale to get new domain
 				const transformedScale = event.transform.rescaleX(referenceScale);
@@ -189,8 +215,11 @@
 			.on('end', () => {
 				isDragging = false;
 				referenceScale = null;
-				// Check range extension after drag ends
-				checkAndExtendRange();
+				// Only check range extension if there was actual movement
+				if (hasActualMovement) {
+					checkAndExtendRange();
+				}
+				hasActualMovement = false;
 			});
 
 		// Setup zoom with double-click to reset
