@@ -3,6 +3,7 @@
 
 	let maxDays = $derived(positionStore.maxDaysToExpiry);
 	let sliderValue = $derived(positionStore.daysToExpiry);
+	let hasPositions = $derived(positionStore.hasPositions);
 
 	// Calculate the selected date based on days to expiry
 	// When at "Today" (sliderValue = maxDays), show today's date
@@ -36,7 +37,7 @@
 </script>
 
 <div class="flex flex-col gap-1">
-	<div class="flex justify-between items-center">
+	<div class="flex justify-between items-center" class:opacity-50={!hasPositions}>
 		<span class="text-sm text-dark-muted">Today</span>
 		<span class="text-sm font-medium text-dark-text">
 			{formatDate(selectedDate())} ({formatDaysLabel(sliderValue)})
@@ -50,6 +51,9 @@
 		step="1"
 		value={maxDays - sliderValue}
 		oninput={handleInput}
+		disabled={!hasPositions}
 		class="w-full h-2 bg-dark-card rounded-lg appearance-none cursor-pointer accent-accent"
+		class:opacity-50={!hasPositions}
+		class:cursor-not-allowed={!hasPositions}
 	/>
 </div>
