@@ -207,7 +207,13 @@
 
 				// Apply transform to reference scale to get new domain
 				const transformedScale = event.transform.rescaleX(referenceScale);
-				const newDomain = transformedScale.domain() as [number, number];
+				let newDomain = transformedScale.domain() as [number, number];
+
+				// Prevent negative prices - clamp minimum to 0
+				if (newDomain[0] < 0) {
+					const shift = -newDomain[0];
+					newDomain = [0, newDomain[1] + shift];
+				}
 
 				// Update view domain - this is the source of truth
 				viewDomain = newDomain;
@@ -319,7 +325,7 @@
 			// Apply constraints to keep prices reasonable
 			// Max range: 5x the current underlying price (reduced from 10x)
 			const maxReasonablePrice = positionStore.underlyingPrice * 5;
-			const minReasonablePrice = Math.max(0, positionStore.underlyingPrice * 0.2);
+			const minReasonablePrice = 0;
 
 			// Constrain the extended range
 			const constrainedRange: [number, number] = [
