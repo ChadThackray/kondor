@@ -132,8 +132,13 @@
 		}
 
 		const pnlExtent = extent(visibleData, (d) => d.pnl) as [number, number];
+		// Add 10% padding to top and bottom so data doesn't touch axes
+		const range = pnlExtent[1] - pnlExtent[0];
+		const padding = range * 0.1;
+		const paddedDomain: [number, number] = [pnlExtent[0] - padding, pnlExtent[1] + padding];
+
 		return scaleLinear()
-			.domain(pnlExtent)
+			.domain(paddedDomain)
 			.range([dimensions.height - margin.bottom, margin.top])
 			.nice();
 	});
