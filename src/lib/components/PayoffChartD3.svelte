@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { scaleLinear, type ScaleLinear } from 'd3-scale';
 	import { extent } from 'd3-array';
-	import { zoom as d3zoom, zoomIdentity, type ZoomTransform, type D3ZoomEvent } from 'd3-zoom';
+	import { zoom as d3zoom, zoomIdentity, type D3ZoomEvent } from 'd3-zoom';
 	import { axisBottom, axisLeft } from 'd3-axis';
 	import { select } from 'd3-selection';
 	import { positionStore } from '$lib/stores/positions.svelte';
@@ -9,7 +9,6 @@
 	import {
 		createLineGenerator,
 		createAreaGenerator,
-		getVisibleRange,
 		needsRangeExtension,
 		calculateExtendedRange,
 		findClosestPoint
@@ -21,11 +20,8 @@
 	// Custom price range for extended zoom
 	let customPriceRange = $state<[number, number] | null>(null);
 
-	// Current zoom transform
-	let zoomTransform = $state<ZoomTransform>(zoomIdentity);
-
-	// Track desired data domain for semantic zooming
-	let customXDomain = $state<[number, number] | null>(null);
+	// The authoritative view domain - always set during pan/zoom, null means use base scale
+	let viewDomain = $state<[number, number] | null>(null);
 
 	// Tooltip state
 	let tooltipData = $state<{
@@ -105,12 +101,10 @@
 			.nice();
 	});
 
-	// Apply zoom transform to get current view domain
+	// Get current view domain - use viewDomain if set, otherwise base scale
 	const currentXDomain = $derived(() => {
-		if (customXDomain) return customXDomain;
-		const scale = baseXScale();
-		const transformed = zoomTransform.rescaleX(scale);
-		return transformed.domain() as [number, number];
+		if (viewDomain) return viewDomain;
+		return baseXScale().domain() as [number, number];
 	});
 
 	// Create display scales that always fill the space
@@ -161,6 +155,9 @@
 	$effect(() => {
 		if (!svgRef) return;
 
+		// Capture reference scale at gesture start - this is critical for smooth panning
+		let referenceScale: ScaleLinear<number, number> | null = null;
+
 		const zoom = d3zoom<SVGSVGElement, unknown>()
 			.scaleExtent([0.5, 20]) // Allow zoom in and out
 			.wheelDelta((event) => {
@@ -170,22 +167,23 @@
 			})
 			.on('start', () => {
 				isDragging = true;
+				// Capture current display scale as reference for this gesture
+				// This ensures transform is always applied to a consistent reference
+				referenceScale = xScale();
 			})
 			.on('zoom', (event: D3ZoomEvent<SVGSVGElement, unknown>) => {
-				// Update transform state - triggers Svelte re-render
-				zoomTransform = event.transform;
+				if (!referenceScale) return;
 
-				// Clear custom domain while zooming so transform is used
-				customXDomain = null;
+				// Apply transform to reference scale to get new domain
+				const transformedScale = event.transform.rescaleX(referenceScale);
+				const newDomain = transformedScale.domain() as [number, number];
 
-				// Only check range extension if not actively dragging
-				// This prevents jumpy behavior during pan
-				if (!isDragging) {
-					checkAndExtendRange();
-				}
+				// Update view domain - this is the source of truth
+				viewDomain = newDomain;
 			})
 			.on('end', () => {
 				isDragging = false;
+				referenceScale = null;
 				// Check range extension after drag ends
 				checkAndExtendRange();
 			});
@@ -245,7 +243,7 @@
 				zoomIdentity
 			);
 			customPriceRange = null;
-			customXDomain = null;
+			viewDomain = null;
 		}
 
 		previousPositionCount = currentCount;
@@ -262,15 +260,15 @@
 			zoomIdentity
 		);
 
-		// Reset custom price range and domain
+		// Reset custom price range and view domain
 		customPriceRange = null;
-		customXDomain = null;
+		viewDomain = null;
 	}
 
 	function checkAndExtendRange() {
 		if (chartData.withTimeValue.length === 0) return;
 
-		// Get visible price range from current zoom transform
+		// Get visible price range from current view domain
 		const [xMin, xMax] = currentXDomain();
 		const visibleRange: [number, number] = [xMin, xMax];
 
@@ -298,8 +296,14 @@
 			// Only update if the constrained range is different from current
 			if (constrainedRange[0] !== dataMin || constrainedRange[1] !== dataMax) {
 				customPriceRange = constrainedRange;
-				// Store the current view domain so it doesn't jump
-				customXDomain = visibleRange;
+				// Reset D3's internal transform since viewDomain is our source of truth
+				// This ensures the next gesture starts fresh with the correct reference scale
+				if (svgRef) {
+					select(svgRef).call(
+						d3zoom<SVGSVGElement, unknown>().transform,
+						zoomIdentity
+					);
+				}
 			}
 		}
 	}
