@@ -1,6 +1,6 @@
 <script lang="ts">
 	import AddPositionForm from '$lib/components/AddPositionForm.svelte';
-	import PayoffChart from '$lib/components/PayoffChart.svelte';
+	import PayoffChartD3 from '$lib/components/PayoffChartD3.svelte';
 	import PositionTable from '$lib/components/PositionTable.svelte';
 	import ChartControls from '$lib/components/ChartControls.svelte';
 	import UnderlyingInput from '$lib/components/UnderlyingInput.svelte';
@@ -31,7 +31,7 @@
 		<main class="flex-1 min-w-0 min-h-0 flex flex-col gap-4">
 			<ChartControls />
 			<div class="flex-1 min-h-0">
-				<PayoffChart />
+				<PayoffChartD3 />
 			</div>
 		</main>
 	</div>

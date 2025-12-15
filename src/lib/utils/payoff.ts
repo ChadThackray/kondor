@@ -329,9 +329,10 @@ export function generateDualChartData(
 	daysToExpiry: number,
 	volatility: number,
 	riskFreeRate: number,
-	numPoints: number = 200
+	numPoints: number = 200,
+	priceRange?: [number, number]
 ): DualChartData {
-	const [minPrice, maxPrice] = calculatePriceRange(positions, currentPrice);
+	const [minPrice, maxPrice] = priceRange ?? calculatePriceRange(positions, currentPrice);
 	const step = (maxPrice - minPrice) / (numPoints - 1);
 
 	const atExpiry: PayoffPoint[] = [];
