@@ -71,9 +71,7 @@
 						<th class="py-2 px-2">Type</th>
 						<th class="py-2 px-2">Dir</th>
 						<th class="py-2 px-2 text-right">Strike</th>
-						<th class="py-2 px-2 text-right">
-							Premium ({positionStore.denomination === 'usd' ? 'USD' : 'BTC'})
-						</th>
+						<th class="py-2 px-2 text-right">Premium</th>
 						<th class="py-2 px-2 text-right">Qty</th>
 						<th class="py-2 px-2 text-right">Current P&L</th>
 						<th class="py-2 px-2 text-right">Max Profit</th>
@@ -103,15 +101,16 @@
 							</td>
 							<td class="py-2 px-2 text-right font-mono">{formatPrice(position.strike)}</td>
 							<td class="py-2 px-2 text-right font-mono">
-								{#if positionStore.denomination === 'usd'}
-									${position.premium.toFixed(2)}
-								{:else if position.premiumBtc !== undefined}
-									<!-- Use original BTC amount (accurate) -->
-									{formatBtc(position.premiumBtc)}
-								{:else}
-									<!-- USD-entered position: convert using entry price -->
-									{formatBtc(position.premium / position.btcPriceAtEntry)}
-								{/if}
+								<div class="flex flex-col">
+									<span>${position.premium.toFixed(2)}</span>
+									<span class="text-dark-muted text-xs">
+										{#if position.premiumBtc !== undefined}
+											{formatBtc(position.premiumBtc)}
+										{:else}
+											{formatBtc(position.premium / position.btcPriceAtEntry)}
+										{/if}
+									</span>
+								</div>
 							</td>
 							<td class="py-2 px-2 text-right">{position.quantity}</td>
 							<td
