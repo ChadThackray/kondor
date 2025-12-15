@@ -3,7 +3,8 @@ import type {
 	PayoffPoint,
 	ChartData,
 	DualChartData,
-	PositionPayoffSeries
+	PositionPayoffSeries,
+	Denomination
 } from '$lib/types/options';
 import { optionPrice, daysToYears } from './blackscholes';
 
@@ -161,9 +162,30 @@ export function formatPrice(price: number): string {
 }
 
 /**
+ * Format Bitcoin amount for display
+ * Shows up to 8 decimal places (satoshi precision) and trims trailing zeros
+ */
+export function formatBtc(value: number): string {
+	// Format with up to 8 decimal places, then remove trailing zeros
+	const formatted = value.toFixed(8).replace(/\.?0+$/, '');
+	return `₿${formatted}`;
+}
+
+/**
  * Format PNL for display
  */
-export function formatPnl(pnl: number): string {
+export function formatPnl(pnl: number, denomination?: Denomination, btcPrice?: number): string {
+	// Handle BTC denomination
+	if (denomination === 'btc') {
+		if (!btcPrice || btcPrice <= 0) {
+			return 'N/A';
+		}
+		const btcValue = pnl / btcPrice;
+		const sign = btcValue >= 0 ? '+' : '';
+		return `${sign}${formatBtc(Math.abs(btcValue))}`;
+	}
+
+	// Default USD formatting
 	const sign = pnl >= 0 ? '+' : '';
 	if (Math.abs(pnl) >= 1000) {
 		return `${sign}${(pnl / 1000).toFixed(2)}k`;

@@ -1,20 +1,24 @@
 <script lang="ts">
-	import type { OptionType, Direction, PositionFormState } from '$lib/types/options';
-	import { positionStore } from '$lib/stores/positions.svelte';
+	import type {
+		OptionType,
+		Direction,
+		PositionFormState,
+	} from "$lib/types/options";
+	import { positionStore } from "$lib/stores/positions.svelte";
 
 	function getDefaultExpiryDate(): string {
 		const date = new Date();
 		date.setDate(date.getDate() + 30);
-		return date.toISOString().split('T')[0];
+		return date.toISOString().split("T")[0];
 	}
 
 	let formState = $state<PositionFormState>({
-		optionType: 'call',
-		direction: 'long',
-		strike: '',
-		premium: '',
-		quantity: '1',
-		expiryDate: getDefaultExpiryDate()
+		optionType: "call",
+		direction: "long",
+		strike: "",
+		premium: "",
+		quantity: "1",
+		expiryDate: getDefaultExpiryDate(),
 	});
 
 	let errors = $state<Partial<Record<keyof PositionFormState, string>>>({});
@@ -24,24 +28,33 @@
 
 		const strike = parseFloat(formState.strike);
 		if (isNaN(strike) || strike <= 0) {
-			newErrors.strike = 'Strike must be positive';
+			newErrors.strike = "Strike must be positive";
 		}
 
 		const premium = parseFloat(formState.premium);
 		if (isNaN(premium) || premium < 0) {
-			newErrors.premium = 'Premium must be non-negative';
+			newErrors.premium = "Premium must be non-negative";
+		}
+
+		// Prevent BTC entry with invalid price
+		if (
+			positionStore.denomination === "btc" &&
+			positionStore.underlyingPrice <= 0
+		) {
+			newErrors.premium =
+				"Cannot enter BTC premium with invalid Bitcoin price";
 		}
 
 		const quantity = parseInt(formState.quantity, 10);
 		if (isNaN(quantity) || quantity <= 0 || quantity > 1000) {
-			newErrors.quantity = 'Quantity must be 1-1000';
+			newErrors.quantity = "Quantity must be 1-1000";
 		}
 
 		const expiryDate = new Date(formState.expiryDate);
 		const today = new Date();
 		today.setHours(0, 0, 0, 0);
 		if (isNaN(expiryDate.getTime()) || expiryDate <= today) {
-			newErrors.expiryDate = 'Expiry must be in the future';
+			newErrors.expiryDate = "Expiry must be in the future";
 		}
 
 		errors = newErrors;
@@ -53,19 +66,37 @@
 
 		if (!validate()) return;
 
+		// Capture entry metadata before conversion
+		const enteredPremium = parseFloat(formState.premium);
+		const currentDenomination = positionStore.denomination;
+		const currentBtcPrice = positionStore.underlyingPrice;
+
+		// Calculate USD premium for storage
+		let premiumInUsd = enteredPremium;
+		let premiumInBtc: number | undefined = undefined;
+
+		if (currentDenomination === "btc") {
+			premiumInUsd = enteredPremium * currentBtcPrice;
+			premiumInBtc = enteredPremium; // Preserve original BTC amount
+		}
+
 		positionStore.addPosition({
 			optionType: formState.optionType,
 			direction: formState.direction,
 			strike: parseFloat(formState.strike),
-			premium: parseFloat(formState.premium),
+			premium: premiumInUsd,
 			quantity: parseInt(formState.quantity, 10),
-			expiryDate: new Date(formState.expiryDate)
+			expiryDate: new Date(formState.expiryDate),
+			// BTC-settled tracking metadata
+			premiumBtc: premiumInBtc,
+			btcPriceAtEntry: currentBtcPrice,
+			denominationAtEntry: currentDenomination,
 		});
 
 		// Reset form (keep type, direction, and expiry, clear numbers)
-		formState.strike = '';
-		formState.premium = '';
-		formState.quantity = '1';
+		formState.strike = "";
+		formState.premium = "";
+		formState.quantity = "1";
 		errors = {};
 	}
 
@@ -87,7 +118,7 @@
 		<div class="flex gap-2">
 			<button
 				type="button"
-				onclick={() => setOptionType('call')}
+				onclick={() => setOptionType("call")}
 				class="flex-1 py-2 px-4 rounded text-sm font-medium transition-colors
                {formState.optionType === 'call'
 					? 'bg-accent text-white'
@@ -97,7 +128,7 @@
 			</button>
 			<button
 				type="button"
-				onclick={() => setOptionType('put')}
+				onclick={() => setOptionType("put")}
 				class="flex-1 py-2 px-4 rounded text-sm font-medium transition-colors
                {formState.optionType === 'put'
 					? 'bg-accent text-white'
@@ -114,7 +145,7 @@
 		<div class="flex gap-2">
 			<button
 				type="button"
-				onclick={() => setDirection('long')}
+				onclick={() => setDirection("long")}
 				class="flex-1 py-2 px-4 rounded text-sm font-medium transition-colors
                {formState.direction === 'long'
 					? 'bg-profit text-white'
@@ -124,7 +155,7 @@
 			</button>
 			<button
 				type="button"
-				onclick={() => setDirection('short')}
+				onclick={() => setDirection("short")}
 				class="flex-1 py-2 px-4 rounded text-sm font-medium transition-colors
                {formState.direction === 'short'
 					? 'bg-loss text-white'
@@ -137,7 +168,9 @@
 
 	<!-- Strike Price -->
 	<div class="flex flex-col gap-1">
-		<label for="strike" class="text-sm text-dark-muted">Strike Price (USD)</label>
+		<label for="strike" class="text-sm text-dark-muted"
+			>Strike Price (USD)</label
+		>
 		<input
 			id="strike"
 			type="text"
@@ -154,7 +187,9 @@
 
 	<!-- Premium -->
 	<div class="flex flex-col gap-1">
-		<label for="premium" class="text-sm text-dark-muted">Premium (USD)</label>
+		<label for="premium" class="text-sm text-dark-muted">
+			Premium ({positionStore.denomination === "usd" ? "USD" : "BTC"})
+		</label>
 		<input
 			id="premium"
 			type="text"
@@ -162,7 +197,7 @@
 			class="w-full px-3 py-2 bg-dark-card border rounded text-dark-text
              focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent
              {errors.premium ? 'border-loss' : 'border-dark-border'}"
-			placeholder="1000"
+			placeholder={positionStore.denomination === "usd" ? "1000" : "0.01"}
 		/>
 		{#if errors.premium}
 			<span class="text-xs text-loss">{errors.premium}</span>
@@ -188,7 +223,9 @@
 
 	<!-- Expiry Date -->
 	<div class="flex flex-col gap-1">
-		<label for="expiryDate" class="text-sm text-dark-muted">Expiry Date</label>
+		<label for="expiryDate" class="text-sm text-dark-muted"
+			>Expiry Date</label
+		>
 		<input
 			id="expiryDate"
 			type="date"

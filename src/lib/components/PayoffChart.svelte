@@ -52,13 +52,21 @@
 				<span>
 					Max Profit:
 					<span class="text-profit font-mono">
-						{stats.maxProfit === 'unlimited' ? 'Unlimited' : formatPnl(stats.maxProfit)}
+						{stats.maxProfit === 'unlimited'
+							? 'Unlimited'
+							: formatPnl(
+									stats.maxProfit,
+									positionStore.denomination,
+									positionStore.underlyingPrice
+								)}
 					</span>
 				</span>
 				<span>
 					Max Loss:
 					<span class="text-loss font-mono">
-						{stats.maxLoss === 'unlimited' ? 'Unlimited' : formatPnl(stats.maxLoss)}
+						{stats.maxLoss === 'unlimited'
+							? 'Unlimited'
+							: formatPnl(stats.maxLoss, positionStore.denomination, positionStore.underlyingPrice)}
 					</span>
 				</span>
 				{#if stats.breakevens.length > 0}
@@ -93,7 +101,8 @@
 						<Axis
 							placement="left"
 							grid
-							format={(d: number) => formatPnl(d)}
+							format={(d: number) =>
+								formatPnl(d, positionStore.denomination, positionStore.underlyingPrice)}
 							tickLabelProps={{ class: 'stroke-none fill-current' }}
 						/>
 						<Axis
@@ -136,14 +145,16 @@
 									<div class="flex justify-between gap-4">
 										<span class="text-dark-muted">Current:</span>
 										<span class="font-mono {data.pnl >= 0 ? 'text-profit' : 'text-loss'}">
-											{formatPnl(data.pnl)}
+											{formatPnl(data.pnl, positionStore.denomination, positionStore.underlyingPrice)}
 										</span>
 									</div>
 								{/if}
 								<div class="flex justify-between gap-4">
 									<span class="text-dark-muted">At Expiry:</span>
 									<span class="font-mono {(atExpiryPnl ?? 0) >= 0 ? 'text-profit' : 'text-loss'}">
-										{atExpiryPnl !== null ? formatPnl(atExpiryPnl) : '-'}
+										{atExpiryPnl !== null
+											? formatPnl(atExpiryPnl, positionStore.denomination, positionStore.underlyingPrice)
+											: '-'}
 									</span>
 								</div>
 							</div>

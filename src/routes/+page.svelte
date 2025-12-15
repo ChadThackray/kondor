@@ -4,6 +4,7 @@
 	import PositionTable from '$lib/components/PositionTable.svelte';
 	import ChartControls from '$lib/components/ChartControls.svelte';
 	import UnderlyingInput from '$lib/components/UnderlyingInput.svelte';
+	import DenominationToggle from '$lib/components/DenominationToggle.svelte';
 </script>
 
 <div class="h-screen flex flex-col p-4 gap-4">
@@ -13,7 +14,10 @@
 			<h1 class="text-2xl font-bold">Kondor</h1>
 			<p class="text-dark-muted text-sm">Options Payoff Visualizer</p>
 		</div>
-		<UnderlyingInput />
+		<div class="flex items-center gap-4">
+			<DenominationToggle />
+			<UnderlyingInput />
+		</div>
 	</header>
 
 	<!-- Main Content -->

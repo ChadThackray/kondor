@@ -1,4 +1,4 @@
-import type { OptionPosition, NewPosition } from '$lib/types/options';
+import type { OptionPosition, NewPosition, Denomination } from '$lib/types/options';
 
 // Reactive state using Svelte 5 runes
 let positions = $state<OptionPosition[]>([]);
@@ -6,6 +6,7 @@ let underlyingPrice = $state<number>(100000); // Default BTC-ish price
 let volatility = $state<number>(0.8); // 80% IV - typical for crypto
 let riskFreeRate = $state<number>(0); // 0% for crypto
 let daysToExpiry = $state<number>(0); // Slider value: 0 = at expiry
+let denomination = $state<Denomination>('usd'); // Default to USD denomination
 
 // Actions
 function addPosition(newPos: NewPosition): void {
@@ -53,6 +54,10 @@ function setDaysToExpiry(days: number): void {
 	}
 }
 
+function setDenomination(d: Denomination): void {
+	denomination = d;
+}
+
 function getMaxDaysToExpiry(): number {
 	if (positions.length === 0) return 365;
 	const now = new Date();
@@ -82,6 +87,9 @@ export const positionStore = {
 	get daysToExpiry() {
 		return daysToExpiry;
 	},
+	get denomination() {
+		return denomination;
+	},
 	get hasPositions() {
 		return positions.length > 0;
 	},
@@ -94,5 +102,6 @@ export const positionStore = {
 	setUnderlyingPrice,
 	setVolatility,
 	setRiskFreeRate,
-	setDaysToExpiry
+	setDaysToExpiry,
+	setDenomination
 };

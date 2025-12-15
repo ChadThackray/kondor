@@ -4,15 +4,22 @@ export type OptionType = 'call' | 'put';
 /** Position direction */
 export type Direction = 'long' | 'short';
 
+/** Currency denomination for display and input */
+export type Denomination = 'usd' | 'btc';
+
 /** Single option position */
 export interface OptionPosition {
 	id: string;
 	optionType: OptionType;
 	direction: Direction;
 	strike: number;
-	premium: number;
+	premium: number; // USD value (used for calculations)
 	quantity: number;
 	expiryDate: Date;
+	// BTC-settled tracking
+	premiumBtc?: number; // Original BTC amount if entered in BTC
+	btcPriceAtEntry: number; // BTC/USD price when position created
+	denominationAtEntry: Denomination; // 'usd' or 'btc'
 }
 
 /** Form input state (string values for input binding) */

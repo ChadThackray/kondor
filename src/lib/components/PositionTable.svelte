@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { positionStore } from '$lib/stores/positions.svelte';
-	import { formatPrice, formatPnl, calculatePositionPnl } from '$lib/utils/payoff';
+	import { formatPrice, formatPnl, formatBtc, calculatePositionPnl } from '$lib/utils/payoff';
 
 	function getMaxProfit(position: typeof positionStore.positions[0]): string {
 		const { optionType, direction, premium, quantity } = position;
@@ -10,10 +10,14 @@
 			if (optionType === 'call') {
 				return 'Unlimited';
 			}
-			return formatPnl((position.strike - premium) * quantity);
+			return formatPnl(
+				(position.strike - premium) * quantity,
+				positionStore.denomination,
+				positionStore.underlyingPrice
+			);
 		} else {
 			// Short: max profit is premium received
-			return formatPnl(premium * quantity);
+			return formatPnl(premium * quantity, positionStore.denomination, positionStore.underlyingPrice);
 		}
 	}
 
@@ -22,13 +26,17 @@
 
 		if (direction === 'long') {
 			// Long: max loss is premium paid
-			return formatPnl(-premium * quantity);
+			return formatPnl(-premium * quantity, positionStore.denomination, positionStore.underlyingPrice);
 		} else {
 			// Short call: unlimited, Short put: strike - premium
 			if (optionType === 'call') {
 				return 'Unlimited';
 			}
-			return formatPnl(-(strike - premium) * quantity);
+			return formatPnl(
+				-(strike - premium) * quantity,
+				positionStore.denomination,
+				positionStore.underlyingPrice
+			);
 		}
 	}
 
@@ -63,7 +71,9 @@
 						<th class="py-2 px-2">Type</th>
 						<th class="py-2 px-2">Dir</th>
 						<th class="py-2 px-2 text-right">Strike</th>
-						<th class="py-2 px-2 text-right">Premium</th>
+						<th class="py-2 px-2 text-right">
+							Premium ({positionStore.denomination === 'usd' ? 'USD' : 'BTC'})
+						</th>
 						<th class="py-2 px-2 text-right">Qty</th>
 						<th class="py-2 px-2 text-right">Current P&L</th>
 						<th class="py-2 px-2 text-right">Max Profit</th>
@@ -92,14 +102,24 @@
 								</span>
 							</td>
 							<td class="py-2 px-2 text-right font-mono">{formatPrice(position.strike)}</td>
-							<td class="py-2 px-2 text-right font-mono">${position.premium.toFixed(2)}</td>
+							<td class="py-2 px-2 text-right font-mono">
+								{#if positionStore.denomination === 'usd'}
+									${position.premium.toFixed(2)}
+								{:else if position.premiumBtc !== undefined}
+									<!-- Use original BTC amount (accurate) -->
+									{formatBtc(position.premiumBtc)}
+								{:else}
+									<!-- USD-entered position: convert using entry price -->
+									{formatBtc(position.premium / position.btcPriceAtEntry)}
+								{/if}
+							</td>
 							<td class="py-2 px-2 text-right">{position.quantity}</td>
 							<td
 								class="py-2 px-2 text-right font-mono {currentPnl >= 0
 									? 'text-profit'
 									: 'text-loss'}"
 							>
-								{formatPnl(currentPnl)}
+								{formatPnl(currentPnl, positionStore.denomination, positionStore.underlyingPrice)}
 							</td>
 							<td class="py-2 px-2 text-right font-mono text-profit">{getMaxProfit(position)}</td>
 							<td class="py-2 px-2 text-right font-mono text-loss">{getMaxLoss(position)}</td>
