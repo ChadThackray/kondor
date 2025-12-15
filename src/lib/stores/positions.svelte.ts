@@ -18,10 +18,16 @@ function addPosition(newPos: NewPosition): void {
 
 function removePosition(id: string): void {
 	positions = positions.filter((p) => p.id !== id);
+	// Reset slider to expiry when all positions are removed
+	if (positions.length === 0) {
+		daysToExpiry = 0;
+	}
 }
 
 function clearAllPositions(): void {
 	positions = [];
+	// Reset slider to expiry when all positions are cleared
+	daysToExpiry = 0;
 }
 
 function setUnderlyingPrice(price: number): void {
