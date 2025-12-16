@@ -5,6 +5,7 @@
 	import ChartControls from '$lib/components/ChartControls.svelte';
 	import UnderlyingInput from '$lib/components/UnderlyingInput.svelte';
 	import DenominationToggle from '$lib/components/DenominationToggle.svelte';
+	import PositionDataControls from '$lib/components/PositionDataControls.svelte';
 </script>
 
 <div class="min-h-screen flex flex-col p-4 gap-4">
@@ -15,6 +16,7 @@
 			<p class="text-dark-muted text-sm">Options Payoff Visualizer</p>
 		</div>
 		<div class="flex items-center gap-4">
+			<PositionDataControls />
 			<DenominationToggle />
 			<UnderlyingInput />
 		</div>

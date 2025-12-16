@@ -1,7 +1,47 @@
 import type { OptionPosition, NewPosition, Denomination } from '$lib/types/options';
+import { browser } from '$app/environment';
+
+const STORAGE_KEY = 'kondor-positions';
+
+// Serialized position type for localStorage (Date as ISO string)
+interface SerializedPosition extends Omit<OptionPosition, 'expiryDate'> {
+	expiryDate: string;
+}
+
+function serializePositions(positions: OptionPosition[]): string {
+	const serialized: SerializedPosition[] = positions.map((p) => ({
+		...p,
+		expiryDate: p.expiryDate.toISOString()
+	}));
+	return JSON.stringify(serialized);
+}
+
+function deserializePositions(json: string): OptionPosition[] {
+	const parsed: SerializedPosition[] = JSON.parse(json);
+	return parsed.map((p) => ({
+		...p,
+		expiryDate: new Date(p.expiryDate)
+	}));
+}
+
+function loadFromStorage(): OptionPosition[] {
+	if (!browser) return [];
+	const stored = localStorage.getItem(STORAGE_KEY);
+	if (!stored) return [];
+	try {
+		return deserializePositions(stored);
+	} catch {
+		return [];
+	}
+}
+
+function saveToStorage(positions: OptionPosition[]): void {
+	if (!browser) return;
+	localStorage.setItem(STORAGE_KEY, serializePositions(positions));
+}
 
 // Reactive state using Svelte 5 runes
-let positions = $state<OptionPosition[]>([]);
+let positions = $state<OptionPosition[]>(loadFromStorage());
 let underlyingPrice = $state<number>(100000); // Default BTC-ish price
 let volatility = $state<number>(0.8); // 80% IV - typical for crypto
 let riskFreeRate = $state<number>(0); // 0% for crypto
@@ -16,12 +56,14 @@ function addPosition(newPos: NewPosition): void {
 		enabled: newPos.enabled ?? true
 	};
 	positions = [...positions, position];
+	saveToStorage(positions);
 }
 
 function togglePosition(id: string): void {
 	positions = positions.map((p) =>
 		p.id === id ? { ...p, enabled: p.enabled === false ? true : false } : p
 	);
+	saveToStorage(positions);
 }
 
 function roundQuantity(n: number, decimals = 1): number {
@@ -32,10 +74,12 @@ function updatePositionQuantity(id: string, quantity: number): void {
 	if (quantity < 0.1 || quantity > 1000) return;
 	const rounded = roundQuantity(quantity);
 	positions = positions.map((p) => (p.id === id ? { ...p, quantity: rounded } : p));
+	saveToStorage(positions);
 }
 
 function removePosition(id: string): void {
 	positions = positions.filter((p) => p.id !== id);
+	saveToStorage(positions);
 	// Reset slider to expiry when all positions are removed
 	if (positions.length === 0) {
 		daysToExpiry = 0;
@@ -44,8 +88,14 @@ function removePosition(id: string): void {
 
 function clearAllPositions(): void {
 	positions = [];
+	saveToStorage(positions);
 	// Reset slider to expiry when all positions are cleared
 	daysToExpiry = 0;
+}
+
+function setPositions(newPositions: OptionPosition[]): void {
+	positions = newPositions;
+	saveToStorage(positions);
 }
 
 function setUnderlyingPrice(price: number): void {
@@ -121,6 +171,7 @@ export const positionStore = {
 	updatePositionQuantity,
 	removePosition,
 	clearAllPositions,
+	setPositions,
 	setUnderlyingPrice,
 	setVolatility,
 	setRiskFreeRate,
