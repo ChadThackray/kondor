@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { formatPrice, formatPnl } from '$lib/utils/payoff';
+	import { formatPrice, formatPnlDirect } from '$lib/utils/payoff';
 	import type { Denomination } from '$lib/types/options';
 
 	interface Props {
@@ -10,7 +10,7 @@
 		currentPnl: number;
 		atExpiryPnl: number | null;
 		denomination: Denomination;
-		btcPrice: number;
+		btcPrice: number; // Kept for backwards compatibility but not used for conversion
 		showingTimeValue: boolean;
 	}
 
@@ -22,7 +22,6 @@
 		currentPnl,
 		atExpiryPnl,
 		denomination,
-		btcPrice,
 		showingTimeValue
 	}: Props = $props();
 
@@ -59,7 +58,7 @@
 					class:text-profit={currentPnl >= 0}
 					class:text-loss={currentPnl < 0}
 				>
-					{formatPnl(currentPnl, denomination, btcPrice)}
+					{formatPnlDirect(currentPnl, denomination)}
 				</span>
 			</div>
 			{#if atExpiryPnl !== null}
@@ -70,7 +69,7 @@
 						class:text-profit={atExpiryPnl >= 0}
 						class:text-loss={atExpiryPnl < 0}
 					>
-						{formatPnl(atExpiryPnl, denomination, btcPrice)}
+						{formatPnlDirect(atExpiryPnl, denomination)}
 					</span>
 				</div>
 			{/if}
@@ -82,7 +81,7 @@
 					class:text-profit={currentPnl >= 0}
 					class:text-loss={currentPnl < 0}
 				>
-					{formatPnl(currentPnl, denomination, btcPrice)}
+					{formatPnlDirect(currentPnl, denomination)}
 				</span>
 			</div>
 		{/if}

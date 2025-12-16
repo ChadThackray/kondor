@@ -9,7 +9,7 @@ import type {
 import { optionPrice, daysToYears } from './blackscholes';
 
 /**
- * Calculate PNL for a single position at a given underlying price (at expiry)
+ * Calculate PNL for a single position at a given underlying price (at expiry) in USD
  */
 export function calculatePositionPnl(position: OptionPosition, underlyingPrice: number): number {
 	const { optionType, direction, strike, premium, quantity } = position;
@@ -31,11 +31,64 @@ export function calculatePositionPnl(position: OptionPosition, underlyingPrice: 
 }
 
 /**
- * Calculate combined PNL across all positions
+ * Calculate PNL for a single position in BTC terms (Bitcoin-settled options)
+ *
+ * For Bitcoin-settled options, payoff is bounded:
+ * - Call: max(0, 1 - K/S) BTC - premium_btc (approaches 1 BTC as S → ∞)
+ * - Put: max(0, K/S - 1) BTC - premium_btc (approaches K/S - 1 as S → 0)
+ */
+export function calculatePositionPnlBtc(position: OptionPosition, underlyingPrice: number): number {
+	const { optionType, direction, strike, premium, quantity, btcPriceAtEntry, premiumBtc } = position;
+
+	// Get premium in BTC (use stored BTC value if available, otherwise convert)
+	const premiumInBtc = premiumBtc ?? (btcPriceAtEntry > 0 ? premium / btcPriceAtEntry : 0);
+
+	// Avoid division by zero
+	if (underlyingPrice <= 0) {
+		// At price 0, call is worthless, put pays max (but we cap at reasonable value)
+		if (optionType === 'call') {
+			const directionMultiplier = direction === 'long' ? 1 : -1;
+			return (-premiumInBtc * directionMultiplier) * quantity;
+		} else {
+			// Put at S=0 would theoretically be infinite in BTC terms
+			// Cap at a large but finite value for display purposes
+			const directionMultiplier = direction === 'long' ? 1 : -1;
+			const maxPutValue = strike / 1; // Use $1 as floor
+			return ((maxPutValue - premiumInBtc) * directionMultiplier) * quantity;
+		}
+	}
+
+	let intrinsicValueBtc: number;
+
+	if (optionType === 'call') {
+		// Call: max(0, 1 - K/S) BTC
+		intrinsicValueBtc = Math.max(0, 1 - strike / underlyingPrice);
+	} else {
+		// Put: max(0, K/S - 1) BTC
+		intrinsicValueBtc = Math.max(0, strike / underlyingPrice - 1);
+	}
+
+	const directionMultiplier = direction === 'long' ? 1 : -1;
+	const pnlPerContractBtc = (intrinsicValueBtc - premiumInBtc) * directionMultiplier;
+
+	return pnlPerContractBtc * quantity;
+}
+
+/**
+ * Calculate combined PNL across all positions in USD
  */
 export function calculateCombinedPnl(positions: OptionPosition[], underlyingPrice: number): number {
 	return positions.reduce((total, pos) => {
 		return total + calculatePositionPnl(pos, underlyingPrice);
+	}, 0);
+}
+
+/**
+ * Calculate combined PNL across all positions in BTC terms
+ */
+export function calculateCombinedPnlBtc(positions: OptionPosition[], underlyingPrice: number): number {
+	return positions.reduce((total, pos) => {
+		return total + calculatePositionPnlBtc(pos, underlyingPrice);
 	}, 0);
 }
 
@@ -76,6 +129,57 @@ export function calculateCombinedPnlWithTimeValue(
 ): number {
 	return positions.reduce((total, pos) => {
 		return total + calculatePositionPnlWithTimeValue(pos, underlyingPrice, daysToExpiry, volatility, riskFreeRate);
+	}, 0);
+}
+
+/**
+ * Calculate PNL for a single position with time value in BTC terms
+ * Converts USD option value to BTC by dividing by the underlying price
+ */
+export function calculatePositionPnlWithTimeValueBtc(
+	position: OptionPosition,
+	underlyingPrice: number,
+	daysToExpiry: number,
+	volatility: number,
+	riskFreeRate: number
+): number {
+	const { optionType, direction, strike, premium, quantity, btcPriceAtEntry, premiumBtc } = position;
+	const isCall = optionType === 'call';
+	const T = daysToYears(daysToExpiry);
+
+	// Get premium in BTC (use stored BTC value if available, otherwise convert)
+	const premiumInBtc = premiumBtc ?? (btcPriceAtEntry > 0 ? premium / btcPriceAtEntry : 0);
+
+	// Avoid division by zero
+	if (underlyingPrice <= 0) {
+		const directionMultiplier = direction === 'long' ? 1 : -1;
+		return (-premiumInBtc * directionMultiplier) * quantity;
+	}
+
+	// Calculate current option value using Black-Scholes (in USD)
+	const currentValueUsd = optionPrice(isCall, underlyingPrice, strike, T, riskFreeRate, volatility);
+
+	// Convert option value to BTC at current price
+	const currentValueBtc = currentValueUsd / underlyingPrice;
+
+	const directionMultiplier = direction === 'long' ? 1 : -1;
+	const pnlPerContractBtc = (currentValueBtc - premiumInBtc) * directionMultiplier;
+
+	return pnlPerContractBtc * quantity;
+}
+
+/**
+ * Calculate combined PNL with time value across all positions in BTC terms
+ */
+export function calculateCombinedPnlWithTimeValueBtc(
+	positions: OptionPosition[],
+	underlyingPrice: number,
+	daysToExpiry: number,
+	volatility: number,
+	riskFreeRate: number
+): number {
+	return positions.reduce((total, pos) => {
+		return total + calculatePositionPnlWithTimeValueBtc(pos, underlyingPrice, daysToExpiry, volatility, riskFreeRate);
 	}, 0);
 }
 
@@ -172,7 +276,7 @@ export function formatBtc(value: number): string {
 }
 
 /**
- * Format PNL for display
+ * Format PNL for display (converts USD to BTC if needed)
  */
 export function formatPnl(pnl: number, denomination?: Denomination, btcPrice?: number): string {
 	// Handle BTC denomination
@@ -186,6 +290,24 @@ export function formatPnl(pnl: number, denomination?: Denomination, btcPrice?: n
 	}
 
 	// Default USD formatting
+	const sign = pnl >= 0 ? '+' : '';
+	if (Math.abs(pnl) >= 1000) {
+		return `${sign}${(pnl / 1000).toFixed(2)}k`;
+	}
+	return `${sign}${pnl.toFixed(2)}`;
+}
+
+/**
+ * Format PNL that is already in the correct denomination (no conversion needed)
+ * Use this when the data has already been calculated in BTC terms
+ */
+export function formatPnlDirect(pnl: number, denomination: Denomination): string {
+	if (denomination === 'btc') {
+		const sign = pnl >= 0 ? '+' : '';
+		return `${sign}${formatBtc(Math.abs(pnl))}`;
+	}
+
+	// USD formatting
 	const sign = pnl >= 0 ? '+' : '';
 	if (Math.abs(pnl) >= 1000) {
 		return `${sign}${(pnl / 1000).toFixed(2)}k`;
@@ -260,6 +382,78 @@ function calculateTheoreticalMaxProfitLoss(positions: OptionPosition[]): {
 }
 
 /**
+ * Calculate theoretical max profit and loss for a portfolio in BTC terms
+ * For Bitcoin-settled options:
+ * - Calls are bounded at 1 BTC per contract (as price → ∞)
+ * - Puts are unbounded in BTC terms (as price → 0, K/S → ∞)
+ */
+function calculateTheoreticalMaxProfitLossBtc(positions: OptionPosition[]): {
+	maxProfit: number | 'unlimited';
+	maxLoss: number | 'unlimited';
+} {
+	if (positions.length === 0) {
+		return { maxProfit: 0, maxLoss: 0 };
+	}
+
+	// Calculate net put exposure (puts are unlimited in BTC terms as S → 0)
+	let netPutExposure = 0;
+
+	for (const pos of positions) {
+		const exposure = pos.quantity * (pos.direction === 'long' ? 1 : -1);
+		if (pos.optionType === 'put') {
+			netPutExposure += exposure;
+		}
+	}
+
+	// In BTC terms:
+	// - Net long puts: unlimited profit (as price → 0, K/S → ∞)
+	// - Net short puts: unlimited loss (as price → 0)
+	// - Calls are always bounded at 1 BTC per contract
+	const hasUnlimitedProfit = netPutExposure > 0;
+	const hasUnlimitedLoss = netPutExposure < 0;
+
+	// Calculate bounded max profit/loss for calls (at S → ∞)
+	// Call payoff approaches 1 BTC per contract as S → ∞
+	let maxProfitFromCalls = 0;
+	let maxLossFromCalls = 0;
+
+	for (const pos of positions) {
+		const { optionType, direction, premium, quantity, btcPriceAtEntry, premiumBtc } = pos;
+
+		// Get premium in BTC
+		const premiumInBtc = premiumBtc ?? (btcPriceAtEntry > 0 ? premium / btcPriceAtEntry : 0);
+
+		if (optionType === 'call') {
+			if (direction === 'long') {
+				// Long call: max profit = (1 - premium_btc) per contract at S → ∞
+				maxProfitFromCalls += (1 - premiumInBtc) * quantity;
+				// Max loss is premium paid (when call expires worthless)
+				maxLossFromCalls += premiumInBtc * quantity;
+			} else {
+				// Short call: max loss = (1 - premium_btc) per contract at S → ∞
+				maxLossFromCalls += (1 - premiumInBtc) * quantity;
+				// Max profit is premium received
+				maxProfitFromCalls += premiumInBtc * quantity;
+			}
+		} else {
+			// Puts: add premium effect when bounded
+			if (direction === 'long') {
+				// Long put max loss is premium paid
+				maxLossFromCalls += premiumInBtc * quantity;
+			} else {
+				// Short put max profit is premium received
+				maxProfitFromCalls += premiumInBtc * quantity;
+			}
+		}
+	}
+
+	return {
+		maxProfit: hasUnlimitedProfit ? 'unlimited' : maxProfitFromCalls,
+		maxLoss: hasUnlimitedLoss ? 'unlimited' : -maxLossFromCalls
+	};
+}
+
+/**
  * Generate chart data for all positions
  */
 export function generateChartData(
@@ -330,13 +524,16 @@ export function generateDualChartData(
 	volatility: number,
 	riskFreeRate: number,
 	numPoints: number = 200,
-	priceRange?: [number, number]
+	priceRange?: [number, number],
+	denomination: Denomination = 'usd'
 ): DualChartData {
 	const [minPrice, maxPrice] = priceRange ?? calculatePriceRange(positions, currentPrice);
 	const step = (maxPrice - minPrice) / (numPoints - 1);
 
 	const atExpiry: PayoffPoint[] = [];
 	const withTimeValue: PayoffPoint[] = [];
+
+	const useBtc = denomination === 'btc';
 
 	// Generate points for both curves
 	for (let i = 0; i < numPoints; i++) {
@@ -345,25 +542,37 @@ export function generateDualChartData(
 		// At-expiry payoff (intrinsic value only)
 		atExpiry.push({
 			price,
-			pnl: calculateCombinedPnl(positions, price)
+			pnl: useBtc
+				? calculateCombinedPnlBtc(positions, price)
+				: calculateCombinedPnl(positions, price)
 		});
 
 		// Time-value payoff (Black-Scholes priced)
 		// When daysToExpiry is 0, this equals the at-expiry value
-		withTimeValue.push({
-			price,
-			pnl:
-				daysToExpiry > 0
-					? calculateCombinedPnlWithTimeValue(positions, price, daysToExpiry, volatility, riskFreeRate)
+		if (daysToExpiry > 0) {
+			withTimeValue.push({
+				price,
+				pnl: useBtc
+					? calculateCombinedPnlWithTimeValueBtc(positions, price, daysToExpiry, volatility, riskFreeRate)
+					: calculateCombinedPnlWithTimeValue(positions, price, daysToExpiry, volatility, riskFreeRate)
+			});
+		} else {
+			withTimeValue.push({
+				price,
+				pnl: useBtc
+					? calculateCombinedPnlBtc(positions, price)
 					: calculateCombinedPnl(positions, price)
-		});
+			});
+		}
 	}
 
 	// Find breakeven points for the time-value curve
 	const breakevens = findBreakevens(withTimeValue);
 
-	// Calculate theoretical max profit/loss (based on at-expiry values)
-	const { maxProfit, maxLoss } = calculateTheoreticalMaxProfitLoss(positions);
+	// Calculate theoretical max profit/loss
+	const { maxProfit, maxLoss } = useBtc
+		? calculateTheoreticalMaxProfitLossBtc(positions)
+		: calculateTheoreticalMaxProfitLoss(positions);
 
 	return {
 		atExpiry,

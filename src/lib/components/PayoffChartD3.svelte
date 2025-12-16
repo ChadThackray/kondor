@@ -5,7 +5,7 @@
 	import { axisBottom, axisLeft } from 'd3-axis';
 	import { select } from 'd3-selection';
 	import { positionStore } from '$lib/stores/positions.svelte';
-	import { generateDualChartData, formatPrice, formatPnl } from '$lib/utils/payoff';
+	import { generateDualChartData, formatPrice, formatPnlDirect } from '$lib/utils/payoff';
 	import {
 		createLineGenerator,
 		createAreaGenerator,
@@ -55,7 +55,7 @@
 
 	// ===== DERIVED STATE =====
 
-	// Generate dual chart data reactively
+	// Generate dual chart data reactively (pass denomination for BTC-denominated payoff)
 	const chartData = $derived(
 		generateDualChartData(
 			positionStore.positions,
@@ -64,7 +64,8 @@
 			positionStore.volatility,
 			positionStore.riskFreeRate,
 			200,
-			customPriceRange ?? undefined
+			customPriceRange ?? undefined,
+			positionStore.denomination
 		)
 	);
 
@@ -251,7 +252,7 @@
 
 		const yAxis = axisLeft(yScale())
 			.ticks(8)
-			.tickFormat((d) => formatPnl(d as number, positionStore.denomination, positionStore.underlyingPrice));
+			.tickFormat((d) => formatPnlDirect(d as number, positionStore.denomination));
 
 		select(xAxisRef).call(xAxis);
 		select(yAxisRef).call(yAxis);
@@ -408,11 +409,7 @@
 					<span class="text-profit font-mono">
 						{stats.maxProfit === 'unlimited'
 							? 'Unlimited'
-							: formatPnl(
-									stats.maxProfit,
-									positionStore.denomination,
-									positionStore.underlyingPrice
-								)}
+							: formatPnlDirect(stats.maxProfit, positionStore.denomination)}
 					</span>
 				</span>
 				<span>
@@ -420,7 +417,7 @@
 					<span class="text-loss font-mono">
 						{stats.maxLoss === 'unlimited'
 							? 'Unlimited'
-							: formatPnl(stats.maxLoss, positionStore.denomination, positionStore.underlyingPrice)}
+							: formatPnlDirect(stats.maxLoss, positionStore.denomination)}
 					</span>
 				</span>
 				{#if stats.breakevens.length > 0}
