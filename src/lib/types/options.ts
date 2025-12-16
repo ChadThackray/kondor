@@ -20,6 +20,7 @@ export interface OptionPosition {
 	premiumBtc?: number; // Original BTC amount if entered in BTC
 	btcPriceAtEntry: number; // BTC/USD price when position created
 	denominationAtEntry: Denomination; // 'usd' or 'btc'
+	enabled?: boolean; // Whether position is included in chart calculations (defaults to true)
 }
 
 /** Form input state (string values for input binding) */

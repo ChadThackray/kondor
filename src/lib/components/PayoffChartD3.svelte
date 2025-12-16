@@ -58,7 +58,7 @@
 	// Generate dual chart data reactively (pass denomination for BTC-denominated payoff)
 	const chartData = $derived(
 		generateDualChartData(
-			positionStore.positions,
+			positionStore.enabledPositions,
 			positionStore.underlyingPrice,
 			positionStore.daysToExpiry,
 			positionStore.volatility,

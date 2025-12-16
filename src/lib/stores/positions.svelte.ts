@@ -12,9 +12,16 @@ let denomination = $state<Denomination>('usd'); // Default to USD denomination
 function addPosition(newPos: NewPosition): void {
 	const position: OptionPosition = {
 		...newPos,
-		id: crypto.randomUUID()
+		id: crypto.randomUUID(),
+		enabled: newPos.enabled ?? true
 	};
 	positions = [...positions, position];
+}
+
+function togglePosition(id: string): void {
+	positions = positions.map((p) =>
+		p.id === id ? { ...p, enabled: p.enabled === false ? true : false } : p
+	);
 }
 
 function removePosition(id: string): void {
@@ -93,10 +100,14 @@ export const positionStore = {
 	get hasPositions() {
 		return positions.length > 0;
 	},
+	get enabledPositions() {
+		return positions.filter((p) => p.enabled !== false);
+	},
 	get maxDaysToExpiry() {
 		return getMaxDaysToExpiry();
 	},
 	addPosition,
+	togglePosition,
 	removePosition,
 	clearAllPositions,
 	setUnderlyingPrice,

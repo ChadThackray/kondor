@@ -1,10 +1,7 @@
 <script lang="ts">
 	import { positionStore } from '$lib/stores/positions.svelte';
-	import { formatPrice, formatPnl, formatBtc, calculatePositionPnl } from '$lib/utils/payoff';
-
-	function getCurrentPnl(position: typeof positionStore.positions[0]): number {
-		return calculatePositionPnl(position, positionStore.underlyingPrice);
-	}
+	import { formatPrice, formatBtc } from '$lib/utils/payoff';
+	import ToggleSwitch from './ToggleSwitch.svelte';
 </script>
 
 <div class="flex flex-col gap-2">
@@ -30,19 +27,24 @@
 			<table class="w-full text-sm">
 				<thead>
 					<tr class="border-b border-dark-border text-dark-muted text-left">
+						<th class="py-2 px-2 w-12"></th>
 						<th class="py-2 px-2">Type</th>
 						<th class="py-2 px-2">Dir</th>
 						<th class="py-2 px-2 text-right">Strike</th>
 						<th class="py-2 px-2 text-right">Premium</th>
 						<th class="py-2 px-2 text-right">Qty</th>
-						<th class="py-2 px-2 text-right">Current P&L</th>
 						<th class="py-2 px-2"></th>
 					</tr>
 				</thead>
 				<tbody>
 					{#each positionStore.positions as position (position.id)}
-						{@const currentPnl = getCurrentPnl(position)}
-						<tr class="border-b border-dark-border/50 hover:bg-dark-card/50">
+						<tr class="border-b border-dark-border/50 hover:bg-dark-card/50 {position.enabled === false ? 'opacity-50' : ''}">
+							<td class="py-2 px-2">
+								<ToggleSwitch
+									checked={position.enabled !== false}
+									onchange={() => positionStore.togglePosition(position.id)}
+								/>
+							</td>
 							<td class="py-2 px-2">
 								<span
 									class="px-2 py-0.5 rounded text-xs font-medium
@@ -73,13 +75,6 @@
 								</div>
 							</td>
 							<td class="py-2 px-2 text-right">{position.quantity}</td>
-							<td
-								class="py-2 px-2 text-right font-mono {currentPnl >= 0
-									? 'text-profit'
-									: 'text-loss'}"
-							>
-								{formatPnl(currentPnl, positionStore.denomination, positionStore.underlyingPrice)}
-							</td>
 							<td class="py-2 px-2">
 								<button
 									onclick={() => positionStore.removePosition(position.id)}
