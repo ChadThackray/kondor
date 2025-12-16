@@ -38,6 +38,7 @@
 							>Premium Per Contract</th
 						>
 						<th class="py-2 px-2 text-right">Qty</th>
+						<th class="py-2 px-2 text-right">Expiry</th>
 						<th class="py-2 px-2"></th>
 					</tr>
 				</thead>
@@ -105,6 +106,9 @@
 											newQty,
 										)}
 								/>
+							</td>
+							<td class="py-2 px-2 text-right font-mono text-dark-muted">
+								{position.expiryDate.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "2-digit" })}
 							</td>
 							<td class="py-2 px-2">
 								<button
