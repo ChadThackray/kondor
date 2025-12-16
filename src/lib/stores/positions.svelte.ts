@@ -24,6 +24,11 @@ function togglePosition(id: string): void {
 	);
 }
 
+function updatePositionQuantity(id: string, quantity: number): void {
+	if (quantity < 1 || quantity > 1000 || !Number.isInteger(quantity)) return;
+	positions = positions.map((p) => (p.id === id ? { ...p, quantity } : p));
+}
+
 function removePosition(id: string): void {
 	positions = positions.filter((p) => p.id !== id);
 	// Reset slider to expiry when all positions are removed
@@ -108,6 +113,7 @@ export const positionStore = {
 	},
 	addPosition,
 	togglePosition,
+	updatePositionQuantity,
 	removePosition,
 	clearAllPositions,
 	setUnderlyingPrice,

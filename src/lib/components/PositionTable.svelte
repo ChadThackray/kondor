@@ -2,6 +2,7 @@
 	import { positionStore } from '$lib/stores/positions.svelte';
 	import { formatPrice, formatBtc } from '$lib/utils/payoff';
 	import ToggleSwitch from './ToggleSwitch.svelte';
+	import EditableQuantity from './EditableQuantity.svelte';
 </script>
 
 <div class="flex flex-col gap-2">
@@ -74,7 +75,12 @@
 									</span>
 								</div>
 							</td>
-							<td class="py-2 px-2 text-right">{position.quantity}</td>
+							<td class="py-2 px-2 text-right">
+								<EditableQuantity
+									value={position.quantity}
+									onchange={(newQty) => positionStore.updatePositionQuantity(position.id, newQty)}
+								/>
+							</td>
 							<td class="py-2 px-2">
 								<button
 									onclick={() => positionStore.removePosition(position.id)}
