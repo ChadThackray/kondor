@@ -2,44 +2,6 @@
 	import { positionStore } from '$lib/stores/positions.svelte';
 	import { formatPrice, formatPnl, formatBtc, calculatePositionPnl } from '$lib/utils/payoff';
 
-	function getMaxProfit(position: typeof positionStore.positions[0]): string {
-		const { optionType, direction, premium, quantity } = position;
-
-		if (direction === 'long') {
-			// Long call: unlimited, Long put: strike - premium
-			if (optionType === 'call') {
-				return 'Unlimited';
-			}
-			return formatPnl(
-				(position.strike - premium) * quantity,
-				positionStore.denomination,
-				positionStore.underlyingPrice
-			);
-		} else {
-			// Short: max profit is premium received
-			return formatPnl(premium * quantity, positionStore.denomination, positionStore.underlyingPrice);
-		}
-	}
-
-	function getMaxLoss(position: typeof positionStore.positions[0]): string {
-		const { optionType, direction, premium, quantity, strike } = position;
-
-		if (direction === 'long') {
-			// Long: max loss is premium paid
-			return formatPnl(-premium * quantity, positionStore.denomination, positionStore.underlyingPrice);
-		} else {
-			// Short call: unlimited, Short put: strike - premium
-			if (optionType === 'call') {
-				return 'Unlimited';
-			}
-			return formatPnl(
-				-(strike - premium) * quantity,
-				positionStore.denomination,
-				positionStore.underlyingPrice
-			);
-		}
-	}
-
 	function getCurrentPnl(position: typeof positionStore.positions[0]): number {
 		return calculatePositionPnl(position, positionStore.underlyingPrice);
 	}
@@ -74,8 +36,6 @@
 						<th class="py-2 px-2 text-right">Premium</th>
 						<th class="py-2 px-2 text-right">Qty</th>
 						<th class="py-2 px-2 text-right">Current P&L</th>
-						<th class="py-2 px-2 text-right">Max Profit</th>
-						<th class="py-2 px-2 text-right">Max Loss</th>
 						<th class="py-2 px-2"></th>
 					</tr>
 				</thead>
@@ -120,8 +80,6 @@
 							>
 								{formatPnl(currentPnl, positionStore.denomination, positionStore.underlyingPrice)}
 							</td>
-							<td class="py-2 px-2 text-right font-mono text-profit">{getMaxProfit(position)}</td>
-							<td class="py-2 px-2 text-right font-mono text-loss">{getMaxLoss(position)}</td>
 							<td class="py-2 px-2">
 								<button
 									onclick={() => positionStore.removePosition(position.id)}
