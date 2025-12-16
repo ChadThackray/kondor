@@ -1,8 +1,8 @@
 <script lang="ts">
-	import { positionStore } from '$lib/stores/positions.svelte';
-	import { formatPrice, formatBtc } from '$lib/utils/payoff';
-	import ToggleSwitch from './ToggleSwitch.svelte';
-	import EditableQuantity from './EditableQuantity.svelte';
+	import { positionStore } from "$lib/stores/positions.svelte";
+	import { formatPrice, formatBtc } from "$lib/utils/payoff";
+	import ToggleSwitch from "./ToggleSwitch.svelte";
+	import EditableQuantity from "./EditableQuantity.svelte";
 </script>
 
 <div class="flex flex-col gap-2">
@@ -27,29 +27,43 @@
 		<div class="overflow-x-auto">
 			<table class="w-full text-sm">
 				<thead>
-					<tr class="border-b border-dark-border text-dark-muted text-left">
+					<tr
+						class="border-b border-dark-border text-dark-muted text-left"
+					>
 						<th class="py-2 px-2 w-12"></th>
 						<th class="py-2 px-2">Type</th>
 						<th class="py-2 px-2">Dir</th>
 						<th class="py-2 px-2 text-right">Strike</th>
-						<th class="py-2 px-2 text-right">Premium</th>
+						<th class="py-2 px-2 text-right"
+							>Premium Per Contract</th
+						>
 						<th class="py-2 px-2 text-right">Qty</th>
 						<th class="py-2 px-2"></th>
 					</tr>
 				</thead>
 				<tbody>
 					{#each positionStore.positions as position (position.id)}
-						<tr class="border-b border-dark-border/50 hover:bg-dark-card/50 {position.enabled === false ? 'opacity-50' : ''}">
+						<tr
+							class="border-b border-dark-border/50 hover:bg-dark-card/50 {position.enabled ===
+							false
+								? 'opacity-50'
+								: ''}"
+						>
 							<td class="py-2 px-2">
 								<ToggleSwitch
 									checked={position.enabled !== false}
-									onchange={() => positionStore.togglePosition(position.id)}
+									onchange={() =>
+										positionStore.togglePosition(
+											position.id,
+										)}
 								/>
 							</td>
 							<td class="py-2 px-2">
 								<span
 									class="px-2 py-0.5 rounded text-xs font-medium
-                    {position.optionType === 'call' ? 'bg-accent/20 text-accent' : 'bg-purple-500/20 text-purple-400'}"
+                    {position.optionType === 'call'
+										? 'bg-accent/20 text-accent'
+										: 'bg-purple-500/20 text-purple-400'}"
 								>
 									{position.optionType.toUpperCase()}
 								</span>
@@ -57,12 +71,16 @@
 							<td class="py-2 px-2">
 								<span
 									class="font-medium
-                    {position.direction === 'long' ? 'text-profit' : 'text-loss'}"
+                    {position.direction === 'long'
+										? 'text-profit'
+										: 'text-loss'}"
 								>
 									{position.direction.toUpperCase()}
 								</span>
 							</td>
-							<td class="py-2 px-2 text-right font-mono">{formatPrice(position.strike)}</td>
+							<td class="py-2 px-2 text-right font-mono"
+								>{formatPrice(position.strike)}</td
+							>
 							<td class="py-2 px-2 text-right font-mono">
 								<div class="flex flex-col">
 									<span>${position.premium.toFixed(2)}</span>
@@ -70,7 +88,10 @@
 										{#if position.premiumBtc !== undefined}
 											{formatBtc(position.premiumBtc)}
 										{:else}
-											{formatBtc(position.premium / position.btcPriceAtEntry)}
+											{formatBtc(
+												position.premium /
+													position.btcPriceAtEntry,
+											)}
 										{/if}
 									</span>
 								</div>
@@ -78,16 +99,28 @@
 							<td class="py-2 px-2 text-right">
 								<EditableQuantity
 									value={position.quantity}
-									onchange={(newQty) => positionStore.updatePositionQuantity(position.id, newQty)}
+									onchange={(newQty) =>
+										positionStore.updatePositionQuantity(
+											position.id,
+											newQty,
+										)}
 								/>
 							</td>
 							<td class="py-2 px-2">
 								<button
-									onclick={() => positionStore.removePosition(position.id)}
+									onclick={() =>
+										positionStore.removePosition(
+											position.id,
+										)}
 									class="text-dark-muted hover:text-loss transition-colors"
 									title="Remove position"
 								>
-									<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<svg
+										class="w-4 h-4"
+										fill="none"
+										stroke="currentColor"
+										viewBox="0 0 24 24"
+									>
 										<path
 											stroke-linecap="round"
 											stroke-linejoin="round"

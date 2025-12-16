@@ -24,9 +24,14 @@ function togglePosition(id: string): void {
 	);
 }
 
+function roundQuantity(n: number, decimals = 1): number {
+	return Math.round(n * 10 ** decimals) / 10 ** decimals;
+}
+
 function updatePositionQuantity(id: string, quantity: number): void {
-	if (quantity < 1 || quantity > 1000 || !Number.isInteger(quantity)) return;
-	positions = positions.map((p) => (p.id === id ? { ...p, quantity } : p));
+	if (quantity < 0.1 || quantity > 1000) return;
+	const rounded = roundQuantity(quantity);
+	positions = positions.map((p) => (p.id === id ? { ...p, quantity: rounded } : p));
 }
 
 function removePosition(id: string): void {

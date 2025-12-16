@@ -6,6 +6,10 @@
 	} from "$lib/types/options";
 	import { positionStore } from "$lib/stores/positions.svelte";
 
+	function roundQuantity(n: number, decimals = 1): number {
+		return Math.round(n * 10 ** decimals) / 10 ** decimals;
+	}
+
 	function getDefaultExpiryDate(): string {
 		const date = new Date();
 		date.setDate(date.getDate() + 30);
@@ -45,9 +49,9 @@
 				"Cannot enter BTC premium with invalid Bitcoin price";
 		}
 
-		const quantity = parseInt(formState.quantity, 10);
-		if (isNaN(quantity) || quantity <= 0 || quantity > 1000) {
-			newErrors.quantity = "Quantity must be 1-1000";
+		const quantity = parseFloat(formState.quantity);
+		if (isNaN(quantity) || quantity < 0.1 || quantity > 1000) {
+			newErrors.quantity = "Quantity must be 0.1-1000";
 		}
 
 		const expiryDate = new Date(formState.expiryDate);
@@ -85,7 +89,7 @@
 			direction: formState.direction,
 			strike: parseFloat(formState.strike),
 			premium: premiumInUsd,
-			quantity: parseInt(formState.quantity, 10),
+			quantity: roundQuantity(parseFloat(formState.quantity)),
 			expiryDate: new Date(formState.expiryDate),
 			// BTC-settled tracking metadata
 			premiumBtc: premiumInBtc,
@@ -188,7 +192,7 @@
 	<!-- Premium -->
 	<div class="flex flex-col gap-1">
 		<label for="premium" class="text-sm text-dark-muted">
-			Premium ({positionStore.denomination === "usd" ? "USD" : "BTC"})
+			Premium per contract ({positionStore.denomination === "usd" ? "USD" : "BTC"})
 		</label>
 		<input
 			id="premium"

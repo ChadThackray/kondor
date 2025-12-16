@@ -13,13 +13,17 @@
 	let hasError = $state(false);
 	let inputEl: HTMLInputElement | undefined = $state();
 
+	function roundQuantity(n: number, decimals = 1): number {
+		return Math.round(n * 10 ** decimals) / 10 ** decimals;
+	}
+
 	function validate(val: string): number | null {
 		const trimmed = val.trim();
-		const num = parseInt(trimmed, 10);
-		if (isNaN(num) || num < 1 || num > 1000 || String(num) !== trimmed) {
+		const num = parseFloat(trimmed);
+		if (isNaN(num) || num < 0.1 || num > 1000) {
 			return null;
 		}
-		return num;
+		return roundQuantity(num);
 	}
 
 	async function startEditing(): Promise<void> {
