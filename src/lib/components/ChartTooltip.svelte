@@ -27,9 +27,9 @@
 
 	// Smart positioning to avoid going off screen
 	const position = $derived(() => {
-		const tooltipWidth = 200;
-		const tooltipHeight = 100;
-		const padding = 10;
+		const tooltipWidth = 280;
+		const tooltipHeight = 140;
+		const padding = 14;
 
 		// Check if tooltip would go off right edge
 		const offsetX = x + tooltipWidth + padding > window.innerWidth ? -tooltipWidth - padding : padding;
@@ -43,15 +43,15 @@
 
 {#if visible}
 	<div
-		class="absolute pointer-events-none z-10 bg-dark-card border border-dark-border rounded-lg p-2 shadow-lg"
+		class="absolute pointer-events-none z-10 bg-dark-card border border-dark-border rounded-lg p-4 shadow-lg"
 		style:left="{position().x}px"
 		style:top="{position().y}px"
 	>
-		<div class="border-b border-dark-border pb-1 mb-1 font-medium text-sm">
+		<div class="border-b border-dark-border pb-2 mb-2 font-medium text-lg">
 			Price: {formatPrice(price)}
 		</div>
 		{#if showingTimeValue}
-			<div class="flex justify-between gap-4 text-xs mb-1">
+			<div class="flex justify-between gap-8 text-base mb-1">
 				<span class="text-dark-muted">Current:</span>
 				<span
 					class="font-mono"
@@ -62,7 +62,7 @@
 				</span>
 			</div>
 			{#if atExpiryPnl !== null}
-				<div class="flex justify-between gap-4 text-xs">
+				<div class="flex justify-between gap-8 text-base">
 					<span class="text-dark-muted">At Expiry:</span>
 					<span
 						class="font-mono"
@@ -74,7 +74,7 @@
 				</div>
 			{/if}
 		{:else}
-			<div class="flex justify-between gap-4 text-xs">
+			<div class="flex justify-between gap-8 text-base">
 				<span class="text-dark-muted">P&L:</span>
 				<span
 					class="font-mono"

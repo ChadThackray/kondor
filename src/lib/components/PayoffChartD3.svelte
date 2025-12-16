@@ -435,7 +435,7 @@
 	<!-- Chart Container -->
 	<div
 		bind:this={containerRef}
-		class="flex-1 bg-dark-card rounded-lg border border-dark-border p-4 overflow-hidden"
+		class="flex-1 min-h-[350px] bg-dark-card rounded-lg border border-dark-border p-4 overflow-hidden"
 	>
 		{#if !positionStore.hasPositions}
 			<div class="flex items-center justify-center h-full text-dark-muted">
