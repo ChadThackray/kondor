@@ -1,6 +1,6 @@
 # Kondor
 
-An options payoff visualizer for crypto traders.
+An options payoff visualizer for crypto traders. Try it out at [kondor.chadthackray.com](https://kondor.chadthackray.com).
 
 ![Kondor Screenshot](static/screenshot.png)
 
