@@ -39,7 +39,7 @@
 <div class="flex flex-col gap-1">
 	<div class="flex justify-between items-center" class:opacity-50={!hasPositions}>
 		<span class="text-sm text-dark-muted">Today</span>
-		<span class="text-sm font-medium text-dark-text">
+		<span class="hidden md:block text-sm font-medium text-dark-text">
 			{formatDate(selectedDate())} ({formatDaysLabel(sliderValue)})
 		</span>
 		<span class="text-sm text-dark-muted">Expiry</span>

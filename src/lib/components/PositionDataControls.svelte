@@ -59,14 +59,14 @@
 	}
 </script>
 
-<div class="flex flex-col gap-1">
+<div class="flex flex-col gap-1 w-full sm:w-auto">
 	<span class="text-sm text-dark-muted">Positions</span>
 	<div class="flex gap-2">
 		<button
 			type="button"
 			onclick={handleExport}
 			disabled={!positionStore.hasPositions}
-			class="py-2 px-4 rounded text-sm font-medium transition-colors
+			class="flex-1 sm:flex-none py-2 px-4 rounded text-sm font-medium transition-colors
                    bg-dark-card border border-dark-border text-dark-muted hover:text-dark-text
                    disabled:opacity-50 disabled:cursor-not-allowed"
 		>
@@ -75,7 +75,7 @@
 		<button
 			type="button"
 			onclick={handleImportClick}
-			class="py-2 px-4 rounded text-sm font-medium transition-colors
+			class="flex-1 sm:flex-none py-2 px-4 rounded text-sm font-medium transition-colors
                    bg-dark-card border border-dark-border text-dark-muted hover:text-dark-text"
 		>
 			Import

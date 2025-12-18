@@ -50,8 +50,14 @@
 	let isDragging = $state(false);
 
 	// Dimensions
-	let dimensions = $state({ width: 800, height: 400 });
-	const margin = { top: 20, right: 20, bottom: 50, left: 60 };
+	let dimensions = $state({ width: 100, height: 100 });
+	// Responsive margins - smaller on narrow screens
+	const margin = $derived({
+		top: 20,
+		right: 15,
+		bottom: 40,
+		left: dimensions.width < 500 ? 45 : 60
+	});
 
 	// ===== DERIVED STATE =====
 
@@ -155,6 +161,10 @@
 			.nice();
 	});
 
+	// Responsive tick counts
+	const xTickCount = $derived(dimensions.width < 400 ? 5 : dimensions.width < 600 ? 7 : 10);
+	const yTickCount = $derived(dimensions.height < 300 ? 5 : 8);
+
 	// Create line and area generators - no zoom transform applied
 	const lineFn = $derived(createLineGenerator(xScale(), yScale()));
 	const areaFn = $derived(createAreaGenerator(xScale(), yScale()));
@@ -247,11 +257,11 @@
 		if (!xAxisRef || !yAxisRef || chartData.withTimeValue.length === 0) return;
 
 		const xAxis = axisBottom(xScale())
-			.ticks(10)
+			.ticks(xTickCount)
 			.tickFormat((d) => formatPrice(d as number));
 
 		const yAxis = axisLeft(yScale())
-			.ticks(8)
+			.ticks(yTickCount)
 			.tickFormat((d) => formatPnlDirect(d as number, positionStore.denomination));
 
 		select(xAxisRef).call(xAxis);
@@ -385,11 +395,11 @@
 
 <div class="flex flex-col h-full">
 	<!-- Stats Header -->
-	<div class="flex items-center justify-between mb-2">
+	<div class="flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-2">
 		<div class="flex items-center gap-3">
-			<h2 class="text-lg font-semibold">
+			<h2 class="text-base md:text-lg font-semibold">
 				{showingTimeValue
-					? `P&L (${positionStore.daysToExpiry} days to expiry)`
+					? `P&L (${positionStore.daysToExpiry}d)`
 					: 'P&L at Expiry'}
 			</h2>
 			{#if positionStore.hasPositions}
@@ -403,7 +413,7 @@
 			{/if}
 		</div>
 		{#if positionStore.hasPositions}
-			<div class="flex gap-4 text-sm">
+			<div class="flex flex-wrap gap-2 md:gap-4 text-xs md:text-sm">
 				<span>
 					Max Profit:
 					<span class="text-profit font-mono">
@@ -421,7 +431,7 @@
 					</span>
 				</span>
 				{#if stats.breakevens.length > 0}
-					<span>
+					<span class="hidden md:inline">
 						Breakeven{stats.breakevens.length > 1 ? 's' : ''}:
 						<span class="text-accent font-mono">
 							{stats.breakevens.map((b) => formatPrice(b)).join(', ')}
@@ -435,14 +445,14 @@
 	<!-- Chart Container -->
 	<div
 		bind:this={containerRef}
-		class="flex-1 min-h-[350px] bg-dark-card rounded-lg border border-dark-border p-4 overflow-hidden"
+		class="relative flex-1 min-h-[250px] md:min-h-[350px] bg-dark-card rounded-lg border border-dark-border overflow-hidden"
 	>
 		{#if !positionStore.hasPositions}
 			<div class="flex items-center justify-center h-full text-dark-muted">
 				<p>Add positions to see the payoff chart</p>
 			</div>
 		{:else}
-			<svg bind:this={svgRef} class="w-full h-full">
+			<svg bind:this={svgRef} class="absolute inset-0 w-full h-full">
 				<!-- Definitions -->
 				<defs>
 					<!-- Clip path for chart area -->
@@ -464,7 +474,7 @@
 
 				<!-- Grid lines -->
 				<g class="grid-lines" clip-path="url(#clip)">
-					{#each xScale().ticks(10) as tick}
+					{#each xScale().ticks(xTickCount) as tick}
 						<line
 							class="grid-line"
 							x1={xScale()(tick)}
@@ -473,7 +483,7 @@
 							y2={dimensions.height - margin.bottom}
 						/>
 					{/each}
-					{#each yScale().ticks(8) as tick}
+					{#each yScale().ticks(yTickCount) as tick}
 						<line
 							class="grid-line"
 							x1={margin.left}

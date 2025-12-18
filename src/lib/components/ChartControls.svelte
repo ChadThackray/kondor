@@ -3,7 +3,7 @@
 	import ExpirySlider from './ExpirySlider.svelte';
 </script>
 
-<div class="flex gap-8 p-4 bg-dark-surface rounded-lg border border-dark-border">
+<div class="flex flex-col md:flex-row gap-4 md:gap-8 p-4 bg-dark-surface rounded-lg border border-dark-border">
 	<div class="flex-1">
 		<VolatilityInput />
 	</div>
