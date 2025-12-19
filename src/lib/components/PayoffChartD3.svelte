@@ -23,6 +23,9 @@
 	// The authoritative view domain - always set during pan/zoom, null means use base scale
 	let viewDomain = $state<[number, number] | null>(null);
 
+	// Track if we've initialized the view domain (prevents auto-recentering on price changes)
+	let viewInitialized = $state(false);
+
 	// Tooltip state
 	let tooltipData = $state<{
 		visible: boolean;
@@ -282,6 +285,15 @@
 		return () => resizeObserver.disconnect();
 	});
 
+	// Initialize view domain once when chart data first becomes available
+	$effect(() => {
+		if (!viewInitialized && chartData.withTimeValue.length > 0) {
+			// Set initial view domain from the base scale
+			viewDomain = baseXScale().domain() as [number, number];
+			viewInitialized = true;
+		}
+	});
+
 	// Reset zoom when positions removed
 	let previousPositionCount = $state(0);
 	$effect(() => {
@@ -295,6 +307,7 @@
 			);
 			customPriceRange = null;
 			viewDomain = null;
+			viewInitialized = false;
 		}
 
 		previousPositionCount = currentCount;
@@ -311,8 +324,10 @@
 			zoomIdentity
 		);
 
-		// Reset custom price range and view domain
+		// Reset custom price range to recalculate based on current price
 		customPriceRange = null;
+		// Temporarily mark as uninitialized so the effect will recalculate the domain
+		viewInitialized = false;
 		viewDomain = null;
 	}
 
