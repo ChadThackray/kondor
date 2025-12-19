@@ -2,7 +2,8 @@
 	import { positionStore } from "$lib/stores/positions.svelte";
 	import { formatPrice, formatBtc } from "$lib/utils/payoff";
 	import ToggleSwitch from "./ToggleSwitch.svelte";
-	import EditableQuantity from "./EditableQuantity.svelte";
+	import EditableNumber from "./EditableNumber.svelte";
+	import EditableDate from "./EditableDate.svelte";
 </script>
 
 <div class="flex flex-col gap-2">
@@ -37,6 +38,7 @@
 						<th class="py-2 px-2 text-right"
 							>Premium Per Contract</th
 						>
+						<th class="py-2 px-2 text-right">BTC/USD</th>
 						<th class="py-2 px-2 text-right">Qty</th>
 						<th class="py-2 px-2 text-right">Expiry</th>
 						<th class="py-2 px-2"></th>
@@ -79,36 +81,87 @@
 									{position.direction.toUpperCase()}
 								</span>
 							</td>
-							<td class="py-2 px-2 text-right font-mono"
-								>{formatPrice(position.strike)}</td
-							>
 							<td class="py-2 px-2 text-right font-mono">
-								<div class="flex flex-col">
-									<span>${position.premium.toFixed(2)}</span>
-									<span class="text-dark-muted text-xs">
-										{#if position.premiumBtc !== undefined}
-											{formatBtc(position.premiumBtc)}
-										{:else}
-											{formatBtc(
-												position.premium /
-													position.btcPriceAtEntry,
+								<EditableNumber
+									value={position.strike}
+									onchange={(newStrike) =>
+										positionStore.updatePositionStrike(
+											position.id,
+											newStrike,
+										)}
+									min={0.01}
+									decimals={0}
+									format={formatPrice}
+									width="w-24"
+								/>
+							</td>
+							<td class="py-2 px-2 text-right font-mono">
+								<div class="flex flex-col items-end">
+									<EditableNumber
+										value={position.premium}
+										onchange={(newPremium) =>
+											positionStore.updatePositionPremium(
+												position.id,
+												newPremium,
 											)}
-										{/if}
-									</span>
+										min={0}
+										decimals={2}
+										format={(v) => `$${v.toFixed(2)}`}
+										width="w-24"
+									/>
+									<div class="text-dark-muted text-xs">
+										<EditableNumber
+											value={position.premiumBtc ?? position.premium / position.btcPriceAtEntry}
+											onchange={(newBtc) =>
+												positionStore.updatePositionPremiumBtc(
+													position.id,
+													newBtc,
+												)}
+											min={0}
+											decimals={8}
+											format={formatBtc}
+											width="w-24"
+										/>
+									</div>
 								</div>
 							</td>
+							<td class="py-2 px-2 text-right font-mono">
+								<EditableNumber
+									value={position.btcPriceAtEntry}
+									onchange={(newPrice) =>
+										positionStore.updatePositionBtcPrice(
+											position.id,
+											newPrice,
+										)}
+									min={0.01}
+									decimals={0}
+									format={formatPrice}
+									width="w-24"
+								/>
+							</td>
 							<td class="py-2 px-2 text-right">
-								<EditableQuantity
+								<EditableNumber
 									value={position.quantity}
 									onchange={(newQty) =>
 										positionStore.updatePositionQuantity(
 											position.id,
 											newQty,
 										)}
+									min={0.1}
+									max={1000}
+									decimals={1}
+									width="w-16"
 								/>
 							</td>
 							<td class="py-2 px-2 text-right font-mono text-dark-muted">
-								{position.expiryDate.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "2-digit" })}
+								<EditableDate
+									value={position.expiryDate}
+									onchange={(newDate) =>
+										positionStore.updatePositionExpiry(
+											position.id,
+											newDate,
+										)}
+								/>
 							</td>
 							<td class="py-2 px-2">
 								<button

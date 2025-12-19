@@ -77,6 +77,50 @@ function updatePositionQuantity(id: string, quantity: number): void {
 	saveToStorage(positions);
 }
 
+function updatePositionStrike(id: string, strike: number): void {
+	if (strike <= 0) return;
+	positions = positions.map((p) => (p.id === id ? { ...p, strike } : p));
+	saveToStorage(positions);
+}
+
+function updatePositionPremium(id: string, premium: number): void {
+	if (premium < 0) return;
+	positions = positions.map((p) => {
+		if (p.id !== id) return p;
+		// Recalculate premiumBtc based on the new USD premium and the original btcPriceAtEntry
+		const premiumBtc = premium / p.btcPriceAtEntry;
+		return { ...p, premium, premiumBtc };
+	});
+	saveToStorage(positions);
+}
+
+function updatePositionPremiumBtc(id: string, premiumBtc: number): void {
+	if (premiumBtc < 0) return;
+	positions = positions.map((p) => {
+		if (p.id !== id) return p;
+		// Recalculate USD premium based on the new BTC premium and btcPriceAtEntry
+		const premium = premiumBtc * p.btcPriceAtEntry;
+		return { ...p, premium, premiumBtc };
+	});
+	saveToStorage(positions);
+}
+
+function updatePositionBtcPrice(id: string, btcPriceAtEntry: number): void {
+	if (btcPriceAtEntry <= 0) return;
+	positions = positions.map((p) => {
+		if (p.id !== id) return p;
+		// Recalculate premiumBtc based on the new BTC price
+		const premiumBtc = p.premium / btcPriceAtEntry;
+		return { ...p, btcPriceAtEntry, premiumBtc };
+	});
+	saveToStorage(positions);
+}
+
+function updatePositionExpiry(id: string, expiryDate: Date): void {
+	positions = positions.map((p) => (p.id === id ? { ...p, expiryDate } : p));
+	saveToStorage(positions);
+}
+
 function removePosition(id: string): void {
 	positions = positions.filter((p) => p.id !== id);
 	saveToStorage(positions);
@@ -169,6 +213,11 @@ export const positionStore = {
 	addPosition,
 	togglePosition,
 	updatePositionQuantity,
+	updatePositionStrike,
+	updatePositionPremium,
+	updatePositionPremiumBtc,
+	updatePositionBtcPrice,
+	updatePositionExpiry,
 	removePosition,
 	clearAllPositions,
 	setPositions,
