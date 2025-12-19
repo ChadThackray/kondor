@@ -380,8 +380,8 @@
 
 		tooltipData = {
 			visible: true,
-			x: event.clientX,
-			y: event.clientY,
+			x: xScale()(point.price),
+			y: yScale()(point.pnl),
 			price: point.price,
 			currentPnl: point.pnl,
 			atExpiryPnl: expiryPoint?.pnl ?? null
@@ -506,6 +506,31 @@
 					{#if showingTimeValue}
 						<path class="line-expiry" d={atExpiryPath} />
 					{/if}
+
+					<!-- Hover point markers -->
+					{#if tooltipData.visible}
+						<line
+							class="hover-line"
+							x1={xScale()(tooltipData.price)}
+							y1={margin.top}
+							x2={xScale()(tooltipData.price)}
+							y2={dimensions.height - margin.bottom}
+						/>
+						<circle
+							class="hover-marker-current"
+							cx={xScale()(tooltipData.price)}
+							cy={yScale()(tooltipData.currentPnl)}
+							r="5"
+						/>
+						{#if showingTimeValue && tooltipData.atExpiryPnl !== null}
+							<circle
+								class="hover-marker-expiry"
+								cx={xScale()(tooltipData.price)}
+								cy={yScale()(tooltipData.atExpiryPnl)}
+								r="5"
+							/>
+						{/if}
+					{/if}
 				</g>
 
 				<!-- Axes -->
@@ -542,6 +567,8 @@
 				denomination={positionStore.denomination}
 				btcPrice={positionStore.underlyingPrice}
 				showingTimeValue={showingTimeValue}
+				containerWidth={dimensions.width}
+				containerHeight={dimensions.height}
 			/>
 		{/if}
 	</div>
@@ -576,6 +603,25 @@
 		fill: none;
 		stroke: rgba(148, 163, 184, 0.5);
 		stroke-width: 1.5;
+	}
+
+	/* Hover markers */
+	:global(.hover-line) {
+		stroke: rgba(139, 148, 158, 0.5);
+		stroke-width: 1;
+		stroke-dasharray: 4 2;
+	}
+
+	:global(.hover-marker-current) {
+		fill: #e6edf3;
+		stroke: #1c2128;
+		stroke-width: 2;
+	}
+
+	:global(.hover-marker-expiry) {
+		fill: rgba(148, 163, 184, 0.7);
+		stroke: #1c2128;
+		stroke-width: 2;
 	}
 
 	/* Area fill */

@@ -12,6 +12,8 @@
 		denomination: Denomination;
 		btcPrice: number; // Kept for backwards compatibility but not used for conversion
 		showingTimeValue: boolean;
+		containerWidth: number;
+		containerHeight: number;
 	}
 
 	let {
@@ -22,22 +24,29 @@
 		currentPnl,
 		atExpiryPnl,
 		denomination,
-		showingTimeValue
+		showingTimeValue,
+		containerWidth,
+		containerHeight
 	}: Props = $props();
 
-	// Smart positioning to avoid going off screen
-	const position = $derived(() => {
-		const tooltipWidth = 280;
-		const tooltipHeight = 140;
-		const padding = 14;
+	// Smart positioning to avoid going off container edge
+	// Using transform for flipping so we don't need to know exact tooltip dimensions
+	const tooltipWidth = 280; // Approximate, for edge detection only
+	const tooltipHeight = 140;
+	const padding = 14;
 
-		// Check if tooltip would go off right edge
-		const offsetX = x + tooltipWidth + padding > window.innerWidth ? -tooltipWidth - padding : padding;
+	const flipX = $derived(x + tooltipWidth + padding > containerWidth);
+	const flipY = $derived(y - tooltipHeight - padding < 0);
 
-		// Check if tooltip would go off bottom edge
-		const offsetY = y + tooltipHeight + padding > window.innerHeight ? -tooltipHeight - padding : padding;
+	const position = $derived(() => ({
+		x: flipX ? x - padding : x + padding,
+		y: flipY ? y + padding : y - padding
+	}));
 
-		return { x: x + offsetX, y: y + offsetY };
+	const transform = $derived(() => {
+		const translateX = flipX ? '-100%' : '0';
+		const translateY = flipY ? '0' : '-100%';
+		return `translate(${translateX}, ${translateY})`;
 	});
 </script>
 
@@ -46,6 +55,7 @@
 		class="absolute pointer-events-none z-10 bg-dark-card border border-dark-border rounded-lg p-4 shadow-lg"
 		style:left="{position().x}px"
 		style:top="{position().y}px"
+		style:transform={transform()}
 	>
 		<div class="border-b border-dark-border pb-2 mb-2 font-medium text-lg">
 			Price: {formatPrice(price)}
